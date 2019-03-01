@@ -20,8 +20,8 @@ class BaseMovement():
         return self.v_angular
 
     def tremor_transform(self, t):
-        return self.amp1 * np.sin(self.freq1 * t + self.phase1) + \
-               self.amp2 * np.sin(self.freq2 * t + self.phase2)
+        return self.amp1 * np.sin(self.freq1 *2*np.pi* t + self.phase1) + \
+               self.amp2 * np.sin(self.freq2 *2*np.pi* t + self.phase2)
 
     def updateTremor(self):
         self.amp1 = np.random.normal(self.amp1, AMP_STD, None)

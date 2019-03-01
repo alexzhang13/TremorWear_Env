@@ -135,7 +135,7 @@ class TremorSim():
 
         # Update Tremor Data (Not Added Until After)
         next_st_data.amp1, next_st_data.freq1, next_st_data.phase1, next_st_data.amp2, next_st_data.freq2, next_st_data.phase2 = movement.updateTremor()
-        next_st_data.tremor_transform = movement.angular_transform(step * DELTA_T)
+        next_st_data.t_angular = movement.tremor_transform(step * DELTA_T)
 
         return next_st_data
 
@@ -147,7 +147,7 @@ class SpatioTemporalData():
     def __init__(self):
         # Initialize spatial information
         self.v_angular = 0.0
-        self.tremor_angle = 0.0
+        self.t_angular = 0.0
         self.time = 0.0
         self.wrist_angle = 0.0
 

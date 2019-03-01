@@ -165,7 +165,7 @@ def get_sequence(env):
     x = np.arange(0, TIME_STEPS+INPUT_SIZE-1)
     y = np.arange(INPUT_SIZE, TIME_STEPS+INPUT_SIZE+OUTPUT_SIZE-1)
 
-    xs = [data[i].gy for i in x]
+    xs = [data[i].getGyroReading() for i in x]
     ys = [ground[i].t_pitch for i in y]
 
     # Bandpass Filter
