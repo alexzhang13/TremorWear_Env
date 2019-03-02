@@ -11,6 +11,7 @@ from environment.environment import TremorSim
 from agents.lstm_agent import LSTM_Agent
 from agents.preprocess import SignalProcessor
 
+from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
@@ -18,16 +19,17 @@ import argparse
 import logging
 import datetime
 
+BATCH_START = 0
 SAMPLE_RATE = 500 # in hz
 TRAINING_STEPS = 2000
 TIME_STEPS = 500
 BATCH_SIZE = 1
-INPUT_SIZE = 128
-OUTPUT_SIZE = 128
-CELL_SIZE = 128
+INPUT_SIZE = 100
+OUTPUT_SIZE = 100
+CELL_SIZE = 4
 NUM_LAYERS = 1
-LR = 0.006
-KEEP_PROB = 0.75
+LR = 0.01
+KEEP_PROB = 0.8
 DROPOUT_IN = 0.2
 
 parser = argparse.ArgumentParser(description='Main for running agents in the Tremor Environment')
@@ -48,6 +50,8 @@ parser.add_argument("--save_model_folder", type=str, default="saved_models/model
 parser.add_argument("--load_model_folder", type=str, default="saved_models/model_1", help="Path to saved model")
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug to Log")
 parser.set_defaults(debug=False)
+parser.add_argument("--graph", dest="graph", action="store_true", help="Graph Output")
+parser.set_defaults(graph=False)
 
 args = parser.parse_args()
 
@@ -60,35 +64,7 @@ def main():
     if args.network == "LSTM":
         LSTM()
     if args.network == "Test":
-        env = TremorSim(1000)
-        ground, data = env.generate_sim()
-
-        fig = plt.figure(figsize=(8.0, 4.0))
-        ax = fig.add_subplot(1, 1, 1)
-
-        ax.set_title(" Generated Simulation Data ", fontsize=18)
-        ax.set_ylabel("Gyro: [rad/s]")
-        ax.set_xlabel("Time [ms]")
-
-        values = [x.getGyroReading() for x in data]
-
-        plt.plot(np.arange(0, 2000, 2), values)
-        plt.show()
-
-        processor = SignalProcessor(500.0)
-
-        fourier, freq = processor.Fourier(values)
-        fig = plt.figure(figsize=(8, 4))
-        ax = fig.add_subplot(1, 1, 1)
-
-        ax.set_title(" FFT Graph: ", fontsize=18)
-        ax.set_ylabel("Amplitude")
-        ax.set_xlabel("Frequency [Hz]")
-
-        ax.plot(freq, 2.0 / len(fourier) * np.abs(fourier[:len(fourier) // 2]))
-        plt.xlim(0, 50)
-
-        plt.show()
+        Test()
 
 def LSTM():
     model = LSTM_Agent(args.is_training, LR, NUM_LAYERS, TIME_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE, BATCH_SIZE, KEEP_PROB,
@@ -100,12 +76,14 @@ def LSTM():
         now = datetime.datetime.now()
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
-        logging.basicConfig(filename="/log/" + "log_{}.txt".format(now.isoformat()), level=logging.DEBUG)
+        logging.basicConfig(filename="./logs/" + "log_{}.log".format(now.isoformat()), level=logging.INFO)
 
     sess = tf.Session()
     merged = tf.summary.merge_all()
-    writer = tf.summary.FileWriter("logs", sess.graph)
+    writer = tf.summary.FileWriter("tf_logs", sess.graph)
     saver = tf.train.Saver(keep_checkpoint_every_n_hours=1, max_to_keep=1000)
+
+    scaler = MinMaxScaler(feature_range=(-1,1))
 
     if args.load_model is True:
         load_model(saver, sess, args.load_model_folder)
@@ -118,7 +96,7 @@ def LSTM():
     plt.ion()
     plt.show()
     for i in range(TRAINING_STEPS):
-        seq, gt, ys = get_sequence(env)
+        seq, gt, y = get_sequence(env, scaler)
         feed_dict = {
             model.x: seq,
             model.y: gt,
@@ -127,38 +105,76 @@ def LSTM():
         _, cost, state, pred = sess.run(
             [model.train_op, model.loss, model.cell_final_state, model.pred],
             feed_dict=feed_dict)
-        if i % 20 == 0:
-            logging.debug('loss: ', round(cost, 4))
-            print('loss: ', round(cost, 4))
+        if i % 25 == 0:
+            logging.info('Episode: {}, Loss: {}'.format(i, round(cost, 4)))
+            print('Episode: {}, Loss: {}'.format(i, round(cost, 4)))
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
-        if args.save_model is True and i % 1000 == 0:
-            save_model(saver, sess, args.save_model_folder, i//1000)
-        if i > TRAINING_STEPS * (3/4):
+        if args.save_model is True and i % 2000 == 0:
+            save_model(saver, sess, args.save_model_folder, i//2000)
+        if args.graph is True:
             # plotting
-            plt.plot(ys[0:OUTPUT_SIZE], gt[0], 'r', ys[0:OUTPUT_SIZE], pred[0], 'b--')
-            plt.ylim((-4, 4))
+            plt.plot(y[0:OUTPUT_SIZE], gt[0], 'r', y[0:OUTPUT_SIZE], pred[0], 'b--')
+            plt.ylim((-1, 1))
             plt.draw()
             plt.pause(0.3)
             plt.clf()
 
+
+def Test():
+    env = TremorSim(1000)
+    ground, data = env.generate_sim()
+
+    fig = plt.figure(figsize=(8.0, 4.0))
+    ax = fig.add_subplot(1, 1, 1)
+
+    ax.set_title(" Generated Simulation Data ", fontsize=18)
+    ax.set_ylabel("Gyro: [rad/s]")
+    ax.set_xlabel("Time [ms]")
+
+    values = [x.getGyroReading() for x in data]
+    gvalues = [y.getTremor() for y in ground]
+
+    plt.plot(np.arange(0, 2000, 2), values)
+    plt.plot(np.arange(0, 2000, 2), gvalues)
+    plt.legend(['sensor', 'ground'], loc='upper left')
+
+    plt.show()
+
+    processor = SignalProcessor(500.0)
+
+    fourier, freq = processor.Fourier(values)
+    fig = plt.figure(figsize=(8, 4))
+    ax = fig.add_subplot(1, 1, 1)
+
+    ax.set_title(" FFT Graph: ", fontsize=18)
+    ax.set_ylabel("Amplitude")
+    ax.set_xlabel("Frequency [Hz]")
+
+    ax.plot(freq, 2.0 / len(fourier) * np.abs(fourier[:len(fourier) // 2]))
+    plt.xlim(0, 50)
+
+    plt.show()
+
+
 def get_experimental_sequence(env):
     global BATCH_START
 
-    seq, res = [], []
-    x = np.arange(BATCH_START, BATCH_START+TIME_STEPS+INPUT_SIZE-1) / (8 * np.pi)
-    y = np.arange(BATCH_START+INPUT_SIZE, BATCH_START+TIME_STEPS+INPUT_SIZE+OUTPUT_SIZE-1) / (8 * np.pi)
+    seq, gt = [], []
+    x = np.arange(0, TIME_STEPS+INPUT_SIZE-1)
+    y = np.arange(INPUT_SIZE, TIME_STEPS+INPUT_SIZE+OUTPUT_SIZE-1)
     xs = 2*np.sin(2*x)+2
-    ys = 2*np.sin(2*x)+2
+    ys = 2*np.sin(2*y)+2
+
     for each in window(xs, INPUT_SIZE):
         seq.append(each)
     for each in window(ys, OUTPUT_SIZE):
-        res.append(each)
+        gt.append(each)
 
-    BATCH_START += TIME_STEPS
-    return [seq, res, y]
+    return [seq, gt, y]
 
-def get_sequence(env):
+
+def get_sequence(env, scaler):
     seq, gt = [], []
     ground, data = env.generate_sim()
 
@@ -166,27 +182,44 @@ def get_sequence(env):
     y = np.arange(INPUT_SIZE, TIME_STEPS+INPUT_SIZE+OUTPUT_SIZE-1)
 
     xs = [data[i].getGyroReading() for i in x]
-    ys = [ground[i].t_pitch for i in y]
+    ys = [ground[i].getTremor() for i in y]
 
     # Bandpass Filter
     processor = SignalProcessor(SAMPLE_RATE)
-    x_filtered, _ = processor.Bandpass_Filter(xs, 3, 12, 5)
+    x_filtered, _ = processor.Bandpass_Filter(xs, 3, 13, 5)
 
-    for each in window(x_filtered, INPUT_SIZE):
+    # Normalize between 0 and 1 for LSTM
+    x_values = x_filtered.reshape((len(x_filtered), 1))
+    x_values = scaler.fit_transform(x_values)
+    x_values = x_values.reshape(1, len(x_values))
+
+    y_values = np.asarray(ys).reshape((len(ys), 1))
+    y_values = scaler.transform(y_values)
+    y_values = y_values.reshape(1, len(ys))
+
+    for each in window(x_values[0], INPUT_SIZE):
         seq.append(each)
-    for each in window(ys, OUTPUT_SIZE):
+    for each in window(y_values[0], OUTPUT_SIZE):
         gt.append(each)
 
+    # a = np.asarray(seq)
+    # a.transpose()
+    # a = scaler.transform(a)
+    # a.transpose()
+
     return [seq, gt, y]
+
 
 def save_model(saver, sess, path, count):
     path += "{}".format(args.network)
     saver.save(sess, path, global_step=count)
-    logging.debug("Model Saved with Count: " + count)
+    logging.info("Model Saved with Count: {}".format(count))
+
 
 def load_model(saver, sess, path):
     saver.restore(sess, path)
-    logging.debug("Model Loaded from Path: {}".format(path))
+    logging.info("Model Loaded from Path: {}".format(path))
+
 
 def window(iterable, size):
     iters = tee(iterable, size)

@@ -1,4 +1,5 @@
 import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
 
 class LSTM_Agent(object):
     def __init__(self, is_training, learning_rate, num_layers, n_steps, input_size, output_size, cell_size, batch_size,
@@ -66,7 +67,7 @@ class LSTM_Agent(object):
         return tf.square(tf.subtract(labels, logits))
 
     def _weight_variable(self, shape, name='weights'):
-        initializer = tf.random_normal_initializer(mean=0.0, stddev=1.0)
+        initializer = tf.random_normal_initializer(mean=0.0, stddev=0.5)
         return tf.get_variable(shape=shape, initializer=initializer, name=name)
 
     def _bias_variable(self, shape, name='biases'):

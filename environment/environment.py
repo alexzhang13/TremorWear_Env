@@ -21,9 +21,12 @@ RAD2DEG = 180.0 / 3.1415926535
 NOISE_STD = 0.005
 
 simulated_action_space = [
-    "Resting",
-    "FreeHandConstantRotation",
-    "FreeHandRotation"
+    "MovementResting",
+    "MovementEating",
+    "MovementRotation",
+    "MovementWriting",
+    "MovementDrinking",
+    "MovementLifting"
 ]
 
 class TremorSim():
@@ -166,6 +169,12 @@ class SpatioTemporalData():
         self.amp2 = amp2
         self.freq2 = freq2
         self.phase2 = phase2
+
+    def getTremor(self):
+        return self.t_angular
+
+    def getAngularV(self):
+        return self.v_angular
 
 # Sensor Data as Metadata for the IMU
 class SensorData():
