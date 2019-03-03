@@ -23,19 +23,21 @@ BATCH_START = 0
 SAMPLE_RATE = 500 # in hz
 TRAINING_STEPS = 2000
 TIME_STEPS = 500
-BATCH_SIZE = 5
 INPUT_SIZE = 100
 OUTPUT_SIZE = 100
 CELL_SIZE = 4
 NUM_LAYERS = 1
 LR = 0.01
-KEEP_PROB = 0.8
-DROPOUT_IN = 0.2
+KEEP_PROB = 0.6
+DROPOUT_IN = 0.4
 
 parser = argparse.ArgumentParser(description='Main for running agents in the Tremor Environment')
 
 # QAgent Arguments
 parser.add_argument("--network", type=str, default="LSTM", help="Network to Run")
+parser.add_argument("--batch_size", type=int, default=64, help="Batch Size for Training")
+parser.add_argument("--save_model_folder", type=str, default="saved_models/model_", help="Path to saved model")
+parser.add_argument("--load_model_folder", type=str, default="saved_models/model_1", help="Path to saved model")
 parser.add_argument("--real", dest="real_data", action="store_true", help="Use Patient Data for Training")
 parser.add_argument("--simulation", dest="real_data", action="store_false", help="Use Simulation for Training")
 parser.set_defaults(real_data=False)
@@ -46,8 +48,6 @@ parser.add_argument("--save_model", dest="save_model", action="store_true", help
 parser.set_defaults(save_model=False)
 parser.add_argument("--load_model", dest="load_model", action="store_true", help="Load LSTM Data")
 parser.set_defaults(load_model=False)
-parser.add_argument("--save_model_folder", type=str, default="saved_models/model_", help="Path to saved model")
-parser.add_argument("--load_model_folder", type=str, default="saved_models/model_1", help="Path to saved model")
 parser.add_argument("--debug", dest="debug", action="store_true", help="Debug to Log")
 parser.set_defaults(debug=False)
 parser.add_argument("--graph", dest="graph", action="store_true", help="Graph Output")
@@ -67,7 +67,7 @@ def main():
         Test()
 
 def LSTM():
-    model = LSTM_Agent(args.is_training, LR, NUM_LAYERS, TIME_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE, BATCH_SIZE, KEEP_PROB,
+    model = LSTM_Agent(args.is_training, LR, NUM_LAYERS, TIME_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE, args.batch_size, KEEP_PROB,
                        DROPOUT_IN)
     env = TremorSim(TIME_STEPS + INPUT_SIZE + OUTPUT_SIZE)
 
@@ -96,7 +96,7 @@ def LSTM():
     plt.ion()
     plt.show()
     for episode in range(TRAINING_STEPS):
-        xs, ys = get_batch_sequence(BATCH_SIZE, env, scaler)
+        xs, ys = get_batch_sequence(args.batch_size, env, scaler)
         feed_dict = {
             model.x: xs,
             model.y: ys,
