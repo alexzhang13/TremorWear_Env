@@ -26,7 +26,8 @@ simulated_action_space = [
     "MovementRotation",
     "MovementWriting",
     "MovementDrinking",
-    "MovementLifting"
+    "MovementWrist",
+    "MovementGrab"
 ]
 
 class TremorSim():
@@ -46,12 +47,12 @@ class TremorSim():
         self.freq2 = 0.0
         self.phase2 = 0.0
 
-        np.random.seed(42)
-        random.seed(42)
+        np.random.seed(7)
+        random.seed(7)
 
     # Generate Full Simulation Case
     def generate_sim(self):
-        self._simulated_tremor = self.choose_movement(2)  #self.init_movement()
+        self._simulated_tremor = self.init_movement()
 
         # Generate Ground Truth Sequence (Spatial "real"[simulated] world information)
         st_info = []
@@ -75,7 +76,7 @@ class TremorSim():
         self.init_constants()
 
         # Initialize Simulated Env (Pick a case randomly)
-        i = random.randint(0, 2)  # random.randint produces a number between a,b INCLUSIVE (as opposed to np)
+        i = random.randint(0, 6)  # random.randint produces a number between a,b INCLUSIVE (as opposed to np)
         env = __import__("environment")
         movements = getattr(env, "movements")
         _class = getattr(movements, simulated_action_space[i])
@@ -90,7 +91,7 @@ class TremorSim():
         # Initialize Simulated Env (Pick a case randomly)
         env = __import__("environment")
         movements = getattr(env, "movements")
-        _class = getattr(movements, simulated_action_space[max(0, min(i, 2))])
+        _class = getattr(movements, simulated_action_space[max(0, min(i, 6))])
         _instance = _class(self.v_angular, self.amp1, self.freq1, self.phase1, self.amp2, self.freq2, self.phase2)
 
         return _instance
@@ -133,7 +134,7 @@ class TremorSim():
         next_st_data = SpatioTemporalData()
 
         # Update Voluntary Motion
-        next_st_data.v_angular = movement.angular_transform(step * DELTA_T)
+        next_st_data.v_angular = movement.angular_transform(step)
         next_st_data.time = step * DELTA_T
 
         # Update Tremor Data (Not Added Until After)
@@ -180,7 +181,7 @@ class SpatioTemporalData():
 class SensorData():
     def __init__(self, st_info, step):
         # Estimate Gyroscope Readings with Added Tremor Motion
-        self.gyro = st_info[step].v_angular * RAD2DEG + st_info[step].amp1 * \
+        self.gyro = st_info[step].v_angular + st_info[step].amp1 * \
         np.sin(st_info[step].freq1*2*np.pi*st_info[step].time + st_info[step].phase1) + st_info[step].amp2 * \
         np.sin(st_info[step].freq2*2*np.pi*st_info[step].time + st_info[step].phase2) + self.noise()
 

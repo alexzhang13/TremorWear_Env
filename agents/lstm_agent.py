@@ -27,8 +27,8 @@ class LSTM_Agent(object):
 
     def add_input_layer(self):
         with tf.name_scope('inputs'):
-            self.x = tf.placeholder(tf.float32, [self.n_steps, self.input_size], name='x')
-            self.y = tf.placeholder(tf.float32, [self.n_steps, self.output_size], name='y')
+            self.x = tf.placeholder(tf.float32, [self.batch_size, self.n_steps, self.input_size], name='x')
+            self.y = tf.placeholder(tf.float32, [self.batch_size, self.n_steps, self.output_size], name='y')
 
         # reshape input to (batch*n_step, in_size)
         in_to_hidden = tf.reshape(self.x, [-1, self.input_size], name='reshape_batch_in')

@@ -23,7 +23,7 @@ BATCH_START = 0
 SAMPLE_RATE = 500 # in hz
 TRAINING_STEPS = 2000
 TIME_STEPS = 500
-BATCH_SIZE = 1
+BATCH_SIZE = 5
 INPUT_SIZE = 100
 OUTPUT_SIZE = 100
 CELL_SIZE = 4
@@ -95,26 +95,26 @@ def LSTM():
 
     plt.ion()
     plt.show()
-    for i in range(TRAINING_STEPS):
-        seq, gt, y = get_sequence(env, scaler)
+    for episode in range(TRAINING_STEPS):
+        xs, ys = get_batch_sequence(BATCH_SIZE, env, scaler)
         feed_dict = {
-            model.x: seq,
-            model.y: gt,
+            model.x: xs,
+            model.y: ys,
         }
 
         _, cost, state, pred = sess.run(
             [model.train_op, model.loss, model.cell_final_state, model.pred],
             feed_dict=feed_dict)
-        if i % 25 == 0:
-            logging.info('Episode: {}, Loss: {}'.format(i, round(cost, 4)))
-            print('Episode: {}, Loss: {}'.format(i, round(cost, 4)))
-            result = sess.run(merged, feed_dict)
-            writer.add_summary(result, i)
-        if args.save_model is True and i % 2000 == 0:
-            save_model(saver, sess, args.save_model_folder, i//2000)
+        logging.info('Episode: {}, Loss: {}'.format(episode, round(cost, 4)))
+        print('Episode: {}, Loss: {}'.format(episode, round(cost, 4)))
+        result = sess.run(merged, feed_dict)
+        writer.add_summary(result, episode)
+
+        if args.save_model is True and episode % 500 == 0:
+            save_model(saver, sess, args.save_model_folder, episode//500)
         if args.graph is True:
             # plotting
-            plt.plot(y[0:OUTPUT_SIZE], gt[0], 'r', y[0:OUTPUT_SIZE], pred[0], 'b--')
+            plt.plot(np.arange(0, OUTPUT_SIZE, 2), ys[0][0], 'r', np.arange(0, OUTPUT_SIZE, 2), pred[0][0], 'b--')
             plt.ylim((-1, 1))
             plt.draw()
             plt.pause(0.3)
@@ -124,6 +124,7 @@ def LSTM():
 def Test():
     env = TremorSim(1000)
     ground, data = env.generate_sim()
+    processor = SignalProcessor(500)
 
     fig = plt.figure(figsize=(8.0, 4.0))
     ax = fig.add_subplot(1, 1, 1)
@@ -134,10 +135,12 @@ def Test():
 
     values = [x.getGyroReading() for x in data]
     gvalues = [y.getTremor() for y in ground]
+    filtered, freq = processor.Bandpass_Filter(values, 3, 13, 5)
 
-    plt.plot(np.arange(0, 2000, 2), values)
+    #plt.plot(np.arange(0, 2000, 2), values)
+    plt.plot(np.arange(0, 2000, 2), filtered)
     plt.plot(np.arange(0, 2000, 2), gvalues)
-    plt.legend(['sensor', 'ground'], loc='upper left')
+    plt.legend(['sensor(filtered)', 'ground'], loc='upper left')
 
     plt.show()
 
@@ -171,7 +174,7 @@ def get_experimental_sequence(env):
     for each in window(ys, OUTPUT_SIZE):
         gt.append(each)
 
-    return [seq, gt, y]
+    return [seq, gt]
 
 
 def get_sequence(env, scaler):
@@ -207,8 +210,15 @@ def get_sequence(env, scaler):
     # a = scaler.transform(a)
     # a.transpose()
 
-    return [seq, gt, y]
+    return [seq, gt]
 
+def get_batch_sequence(batch_size, env, scaler):
+    xs, ys = [], []
+    for i in range(batch_size):
+        seq, gt = get_sequence(env, scaler)
+        xs.append(seq)
+        ys.append(gt)
+    return xs, ys
 
 def save_model(saver, sess, path, count):
     path += "{}".format(args.network)
