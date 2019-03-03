@@ -19,12 +19,11 @@ import argparse
 import logging
 import datetime
 
-BATCH_START = 0
 SAMPLE_RATE = 500 # in hz
 TRAINING_STEPS = 2000
-TIME_STEPS = 500
-INPUT_SIZE = 100
-OUTPUT_SIZE = 100
+TIME_STEPS = 600
+INPUT_SIZE = 200
+OUTPUT_SIZE = 200
 CELL_SIZE = 4
 NUM_LAYERS = 1
 LR = 0.01
@@ -83,6 +82,7 @@ def LSTM():
     writer = tf.summary.FileWriter("tf_logs", sess.graph)
     saver = tf.train.Saver(keep_checkpoint_every_n_hours=1, max_to_keep=1000)
 
+    env = TremorSim(INPUT_SIZE + TIME_STEPS + OUTPUT_SIZE)
     scaler = MinMaxScaler(feature_range=(-1,1))
 
     if args.load_model is True:
@@ -112,12 +112,12 @@ def LSTM():
 
         if args.save_model is True and episode % 500 == 0:
             save_model(saver, sess, args.save_model_folder, episode//500)
-        if args.graph is True:
+        if args.graph is True and episode % 50 == 0:
             # plotting
-            plt.plot(np.arange(0, OUTPUT_SIZE, 2), ys[0][0], 'r', np.arange(0, OUTPUT_SIZE, 2), pred[0][0], 'b--')
+            plt.plot(np.arange(0, OUTPUT_SIZE*2, 2), ys[0][0], 'r', np.arange(0, OUTPUT_SIZE*2, 2), pred[0][0:OUTPUT_SIZE], 'b--')
             plt.ylim((-1, 1))
             plt.draw()
-            plt.pause(0.3)
+            plt.pause(0.5)
             plt.clf()
 
 

@@ -19,6 +19,7 @@ DELTA_T = 1 / DEVICE_HZ  # Change in time per episode
 DEG2RAD = 3.1415926535 / 180.0
 RAD2DEG = 180.0 / 3.1415926535
 NOISE_STD = 0.005
+MAX_RECORDED_SIZE = 10000
 
 simulated_action_space = [
     "MovementResting",
@@ -29,6 +30,7 @@ simulated_action_space = [
     "MovementWrist",
     "MovementGrab"
 ]
+
 
 class TremorSim():
     def __init__(self, max_steps):
@@ -46,6 +48,11 @@ class TremorSim():
         self.amp2 = 0.0
         self.freq2 = 0.0
         self.phase2 = 0.0
+
+        # For recording
+        self.start_step = 0
+        if self.max_steps < MAX_RECORDED_SIZE:
+            self.start_step = random.randint(0, MAX_RECORDED_SIZE-max_steps)
 
         np.random.seed(7)
         random.seed(7)
@@ -134,7 +141,7 @@ class TremorSim():
         next_st_data = SpatioTemporalData()
 
         # Update Voluntary Motion
-        next_st_data.v_angular = movement.angular_transform(step)
+        next_st_data.v_angular = movement.angular_transform(step, self.start_step)
         next_st_data.time = step * DELTA_T
 
         # Update Tremor Data (Not Added Until After)

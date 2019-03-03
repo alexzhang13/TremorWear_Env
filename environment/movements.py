@@ -21,8 +21,8 @@ class BaseMovement():
 
         self.seq = self.read(path)[self.chooser]
 
-    def angular_transform(self, step):
-        return self.seq[step] * self.multiplier + np.random.normal(0.0, ANGULAR_STD)
+    def angular_transform(self, step, stepi):
+        return self.seq[step+stepi] * self.multiplier + np.random.normal(0.0, ANGULAR_STD)
 
     def tremor_transform(self, t):
         return self.amp1 * np.sin(self.freq1 *2*np.pi* t + self.phase1) + \
