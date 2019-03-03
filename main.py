@@ -18,6 +18,7 @@ import numpy as np
 import argparse
 import logging
 import datetime
+import random
 
 SAMPLE_RATE = 500 # in hz
 TRAINING_STEPS = 2000
@@ -66,9 +67,9 @@ def main():
         Test()
 
 def LSTM():
+    # Initialize LSTM
     model = LSTM_Agent(args.is_training, LR, NUM_LAYERS, TIME_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE, args.batch_size, KEEP_PROB,
                        DROPOUT_IN)
-    env = TremorSim(TIME_STEPS + INPUT_SIZE + OUTPUT_SIZE)
 
     if args.debug is True:
         print("Debugging to Log File...")
@@ -122,7 +123,7 @@ def LSTM():
 
 
 def Test():
-    env = TremorSim(1000)
+    env = TremorSim(200)
     ground, data = env.generate_sim()
     processor = SignalProcessor(500)
 
@@ -137,10 +138,10 @@ def Test():
     gvalues = [y.getTremor() for y in ground]
     filtered, freq = processor.Bandpass_Filter(values, 3, 13, 5)
 
-    #plt.plot(np.arange(0, 2000, 2), values)
-    plt.plot(np.arange(0, 2000, 2), filtered)
-    plt.plot(np.arange(0, 2000, 2), gvalues)
-    plt.legend(['sensor(filtered)', 'ground'], loc='upper left')
+    plt.plot(np.arange(0, 400, 2), values)
+    plt.plot(np.arange(0, 400, 2), filtered)
+    plt.plot(np.arange(0, 400, 2), gvalues)
+    plt.legend(['sensor(unfiltered)', 'sensor(filtered)', 'ground'], loc='upper left')
 
     plt.show()
 

@@ -34,6 +34,10 @@ simulated_action_space = [
 
 class TremorSim():
     def __init__(self, max_steps):
+        # Initialize Seeds
+        np.random.seed(7)
+        random.seed(7)
+
         # Initialize Spatiotemporal information from start to end of episode [ground truth]
         self.init_constants()
         self.steps = 0
@@ -53,9 +57,6 @@ class TremorSim():
         self.start_step = 0
         if self.max_steps < MAX_RECORDED_SIZE:
             self.start_step = random.randint(0, MAX_RECORDED_SIZE-max_steps)
-
-        np.random.seed(7)
-        random.seed(7)
 
     # Generate Full Simulation Case
     def generate_sim(self):
