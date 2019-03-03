@@ -76,7 +76,7 @@ def LSTM():
         now = datetime.datetime.now()
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
-        logging.basicConfig(filename="./logs/" + "log_{}.log".format(now.isoformat()), level=logging.INFO)
+        logging.basicConfig(filename="./logs/" + "log_{}.log".format(now.strftime("%m-%d-%Y-%H-%M-%S")), level=logging.INFO)
 
     sess = tf.Session()
     merged = tf.summary.merge_all()
