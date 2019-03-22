@@ -24,7 +24,7 @@ MAX_RECORDED_SIZE = 10000
 simulated_action_space = [
     "MovementResting",
     "MovementEating",
-    "MovementRotation",
+    "MovementResting",
     "MovementWriting",
     "MovementDrinking",
     "MovementWrist",
@@ -33,11 +33,7 @@ simulated_action_space = [
 
 
 class TremorSim():
-    def __init__(self, max_steps):
-        # Initialize Seeds
-        np.random.seed(7)
-        random.seed(7)
-
+    def __init__(self, max_steps, random_step=False):
         # Initialize Spatiotemporal information from start to end of episode [ground truth]
         self.init_constants()
         self.steps = 0
@@ -55,8 +51,10 @@ class TremorSim():
 
         # For recording
         self.start_step = 0
-        if self.max_steps < MAX_RECORDED_SIZE:
+        if self.max_steps < MAX_RECORDED_SIZE and random_step:
             self.start_step = random.randint(0, MAX_RECORDED_SIZE-max_steps)
+        else:
+            self.start_step = 0
 
     # Generate Full Simulation Case
     def generate_sim(self):
@@ -110,18 +108,18 @@ class TremorSim():
         self.v_angular = random.uniform(-2, 2)
 
         # Tremor Info
-        self.amp1 = random.uniform(0.0, 1.0)
+        self.amp1 = random.uniform(0.0, 2)
         self.freq1 = random.uniform(3, 12)
         self.phase1 = random.uniform(0, 2*np.pi)
 
         # Chance for Second Tremor
-        choice = random.randint(0, 1)
+        choice = random.randint(0, 9)
         if choice == 0:
             self.amp2 = 0.0
             self.freq2 = 0.0
             self.phase2 = 0.0
         else:
-            self.amp2 = random.uniform(0.0, 1.0)
+            self.amp2 = random.uniform(0.0, 2)
             self.freq2 = random.uniform(3, 12)
             self.phase2 = random.uniform(0, 2 * np.pi)
 

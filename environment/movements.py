@@ -1,11 +1,13 @@
-import os
+import sys
+sys.path.append("F:/Apollo_NT/TremorWear_Env/")
+
 import numpy as np
 from scanf import scanf
 
-AMP_STD = 0.005
-FREQ_STD = 0.01
-PHASE_STD = 0.005
-ANGULAR_STD = 0.005
+AMP_STD = 0.01
+FREQ_STD = 0.0005
+PHASE_STD = 0.00001
+ANGULAR_STD = 0.0001
 
 class BaseMovement():
     def __init__(self, v_angular, amp1, freq1, phase1, amp2, freq2, phase2, path=""):
@@ -34,7 +36,14 @@ class BaseMovement():
 
         self.freq1 = np.random.normal(self.freq1, FREQ_STD, None)
         self.freq2 = np.random.normal(self.freq2, FREQ_STD, None)
-
+        if self.freq1 < 3:
+            self.freq1 = 3
+        elif self.freq1 > 12:
+            self.freq1 = 12
+        if self.freq2 < 3:
+            self.freq2 = 3
+        elif self.freq2 > 12:
+            self.freq2 = 12
         self.phase1 = np.random.normal(self.phase1, PHASE_STD, None)
         self.phase2 = np.random.normal(self.phase2, PHASE_STD, None)
 
@@ -43,7 +52,7 @@ class BaseMovement():
     @staticmethod
     def read(filename):
         gx, gy, gz = [], [], []
-        with open("./env_movements/" + filename + ".txt") as data:
+        with open("../env_movements/" + filename + ".txt") as data:
             freq = scanf("%f", data.readline())
             for line in data:
                 _, _, _, _, gxt, gyt, gzt = scanf("%f %f %f %f %f %f %f", line)
