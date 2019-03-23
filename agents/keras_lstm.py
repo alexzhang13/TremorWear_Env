@@ -19,6 +19,7 @@ from sklearn.metrics import mean_squared_error
 from keras.callbacks import CSVLogger
 from environment.environment import TremorSim
 from environment.DataGenerator import DataGenerator
+from environment.DataGeneratorBatch import DataGeneratorBatch
 from agents import preprocess
 
 
@@ -29,10 +30,10 @@ def Keras_LSTM():
 
     input_size = 64
     output_size = 64
-    batch_size = 500
+    batch_size = 10000 - input_size - output_size
 
     training_generator = DataGenerator(batch_size, input_size, output_size)
-    validation_generator = DataGenerator(batch_size, input_size, output_size)
+    validation_generator = DataGenerator(1000, input_size, output_size)
 
     # create and fit the LSTM network
     model = Sequential()
@@ -41,17 +42,18 @@ def Keras_LSTM():
     model.add(Conv1D(64, 3, padding='same', input_shape=(input_size, 1)))
     model.add(LeakyReLU(alpha=0.1))
     model.add(MaxPooling1D(pool_size=2, stride=2, padding='same'))
-    model.add(Dropout(0.4))
+    model.add((Dropout(rate=0.5)))
 
     model.add(Conv1D(128, 3, padding='same'))
     model.add(LeakyReLU(alpha=0.1))
     model.add(MaxPooling1D(pool_size=2, stride=2, padding='same'))
-    model.add(Dropout(0.4))
+    model.add(Dropout(rate=0.5))
 
     model.add(CuDNNLSTM(32))
+    model.add(Dropout(rate=0.5))
     model.add((Dense(output_size)))
     model.add((Activation('linear')))
-    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mse'])
+    model.compile(loss='mean_squared_error', optimizer='adam')
 
     # Load the weights
     #model.load_weights('model_weights.h5')
@@ -62,7 +64,7 @@ def Keras_LSTM():
     checkpoint = ModelCheckpoint(filepath, monitor='mean_squared_error', verbose=1, save_best_only=False, mode='min')
     callbacks_list = [checkpoint, csv_logger]
     model.fit_generator(generator=training_generator, validation_data=validation_generator, callbacks=callbacks_list,
-                        verbose=2, epochs=3000)
+                        verbose=1, epochs=3000)
 
     # Save the weights
     model.save_weights('model_weights.h5')

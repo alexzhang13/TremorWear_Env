@@ -6,7 +6,7 @@ from environment.environment import TremorSim
 from agents import preprocess
 
 
-class DataGenerator(keras.utils.Sequence):
+class DataGeneratorBatch(keras.utils.Sequence):
     def __init__(self, batch_size=32, INPUT_SIZE=64, OUTPUT_SIZE=64, shuffle=True):
         self.INPUT_SIZE = INPUT_SIZE
         self.OUTPUT_SIZE = OUTPUT_SIZE
@@ -23,11 +23,12 @@ class DataGenerator(keras.utils.Sequence):
 
     def __getitem__(self, index):
         'Generate one batch of data'
-        X, Y = self.__data_generation(index)
-        return X, Y
+        X, y = self.__data_generation(index)
+
+        return np.expand_dims(X, axis=0), y
 
     def __data_generation(self, idx):
-        return np.expand_dims(np.expand_dims(self.trainX[idx], axis=0), axis=2), np.expand_dims(self.trainY[idx], axis=0)
+        return self.trainX[idx], self.trainY[idx]
 
     def get_sequence(self):
         ground, data = self.env.generate_sim()
@@ -47,24 +48,27 @@ class DataGenerator(keras.utils.Sequence):
 
         return [dataset, gdataset]
 
+    def create_dataset_batch(self):
+        trainX = np.empty((self.batch_size, 10000-self.INPUT_SIZE-self.OUTPUT_SIZE, self.INPUT_SIZE))
+        trainY = np.empty((self.batch_size, 10000-self.INPUT_SIZE-self.OUTPUT_SIZE, self.OUTPUT_SIZE))
+        for i in range(self.batch_size):
+            seq, gt = self.get_sequence()
+            X, Y = self.create_dataset(seq, gt, self.INPUT_SIZE, self.OUTPUT_SIZE)
+            trainX[i] = np.array(X)
+            trainY[i] = np.array(Y)
+        return trainX, trainY
 
     def create_dataset(self, dataset, gdataset, input_size=1, output_size=1):
-        if 10000 - input_size - output_size <= self.batch_size:
-            const = 0
-        else:
-            const = np.random.randint(0, len(dataset) - (output_size + input_size + self.batch_size)-1)
-        dataX = np.empty((self.batch_size, input_size))
-        dataY = np.empty((self.batch_size, output_size))
-        for i in range(self.batch_size):
-            a = np.array(dataset[i+const:(i + const + input_size), 0])
-            b = np.array(gdataset[(i + const + input_size):(i + const + input_size + output_size), 0])
-            dataX[i] = a
-            dataY[i] = b
-        return dataX, dataY
+        dataX, dataY = [], []
+        for i in range(10000-input_size-output_size):
+            a = dataset[i:(i + input_size), 0]
+            b = gdataset[(i + input_size):(i + input_size + output_size), 0]
+            dataX.append(a)
+            dataY.append(b)
+        return np.array(dataX), np.array(dataY)
 
     def __len__(self):
         return self.batch_size
 
     def on_epoch_end(self):
-        seq, gt = self.get_sequence()
-        self.trainX, self.trainY = self.create_dataset(seq, gt, self.INPUT_SIZE, self.OUTPUT_SIZE)
+        self.trainX, self.trainY = self.create_dataset_batch()
